@@ -137,8 +137,10 @@ async function startServer() {
     res.json(storage.getPublicConfig());
   });
 
-  // Update recipient payment info (card, holder, bank, phone/ID)
-  app.post('/api/config/recipient', (req: Request, res: Response) => {
+  // Update recipient payment info (admin-only)
+  app.post('/api/config/recipient', async (req: Request, res: Response) => {
+    const admin = await authenticateAdmin(req, res);
+    if (!admin) return;
     const { cardNumber, cardHolder, bankName, sbpPhone, cardNumberVisa, bankNameVisa } = req.body;
     if (!cardNumber || !cardHolder) {
       return res.status(400).json({ error: 'Укажите номер карты и имя получателя' });

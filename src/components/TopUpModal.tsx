@@ -5,7 +5,6 @@ import { UserProfile } from './AuthModal';
 import { GoldOrder, PublicConfig } from '../server/types';
 import {
   fetchPublicConfig,
-  updateRecipientConfig,
   createGoldOrder,
   uploadOrderReceipt,
   fetchUserOrders,
@@ -28,8 +27,6 @@ import {
   CreditCard,
   Send,
   Sparkles,
-  Edit2,
-  Save,
 } from 'lucide-react';
 
 interface TopUpModalProps {
@@ -86,18 +83,6 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isCredited, setIsCredited] = useState<boolean>(false);
 
-  // Selected card type for copy / payment ('humo' | 'visa')
-  const [selectedCardType, setSelectedCardType] = useState<'humo' | 'visa'>('humo');
-
-  // Editable recipient details state (change cards/name directly in UI)
-  const [isEditingDetails, setIsEditingDetails] = useState<boolean>(false);
-  const [editCardHumo, setEditCardHumo] = useState<string>('9860 1701 1354 8268');
-  const [editCardVisa, setEditCardVisa] = useState<string>('4023 0605 0973 3761');
-  const [editHolder, setEditHolder] = useState<string>('Musallam Abidov');
-  const [editPhone, setEditPhone] = useState<string>('200205068');
-  const [isSavingDetails, setIsSavingDetails] = useState<boolean>(false);
-  const [detailsFeedback, setDetailsFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
   // Orders History
   const [historyOrders, setHistoryOrders] = useState<GoldOrder[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(false);
@@ -111,14 +96,6 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
     fetchPublicConfig()
       .then((cfg) => {
         setConfig(cfg);
-        if (cfg.recipient) {
-          const isStaleCard = !cfg.recipient.cardNumber || cfg.recipient.cardNumber.includes('любое');
-          setEditCardHumo(!isStaleCard ? cfg.recipient.cardNumber : '9860 1701 1354 8268');
-          setEditCardVisa(cfg.recipient.cardNumberVisa || '4023 0605 0973 3761');
-          const isStaleHolder = !cfg.recipient.cardHolder || cfg.recipient.cardHolder.includes('JANIBEK');
-          setEditHolder(!isStaleHolder ? cfg.recipient.cardHolder : 'Musallam Abidov');
-          setEditPhone(cfg.recipient.sbpPhone && !cfg.recipient.sbpPhone.includes('+998 913690778') ? cfg.recipient.sbpPhone : '200205068');
-        }
       })
       .catch((err) => console.warn('Could not load backend config:', err));
   }, []);
@@ -129,56 +106,6 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
   const effectiveCardVisa = config.recipient?.cardNumberVisa || '4023 0605 0973 3761';
   const effectiveHolder = !isStale(config.recipient?.cardHolder) ? config.recipient.cardHolder : 'Musallam Abidov';
   const effectivePhone = (config.recipient?.sbpPhone && !config.recipient.sbpPhone.includes('+998 913690778')) ? config.recipient.sbpPhone : '200205068';
-
-  const handleSaveDetails = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!editCardHumo.trim() && !editCardVisa.trim()) {
-      setDetailsFeedback({ type: 'error', text: 'Укажите хотя бы один номер карты' });
-      return;
-    }
-    setIsSavingDetails(true);
-    setDetailsFeedback(null);
-    try {
-      const res = await updateRecipientConfig({
-        cardNumber: editCardHumo.trim() || '9860 1701 1354 8268',
-        cardNumberVisa: editCardVisa.trim() || '4023 0605 0973 3761',
-        cardHolder: editHolder.trim() || 'Musallam Abidov',
-        bankName: 'Humo',
-        bankNameVisa: 'Visa',
-        sbpPhone: editPhone.trim() || '200205068',
-      });
-      if (res.success && res.recipient) {
-        setConfig((prev) => ({
-          ...prev,
-          recipient: res.recipient,
-        }));
-        if (currentOrder) {
-          setCurrentOrder((prev) => prev ? {
-            ...prev,
-            recipientCard: res.recipient.cardNumber,
-            recipientName: res.recipient.cardHolder,
-            recipientBank: res.recipient.bankName,
-            sbpPhone: res.recipient.sbpPhone,
-          } : null);
-        }
-        sound.playWin(true);
-        confetti({
-          particleCount: 50,
-          spread: 60,
-          origin: { y: 0.6 },
-        });
-        setDetailsFeedback({ type: 'success', text: '✅ Реквизиты Humo и Visa успешно сохранены!' });
-        setTimeout(() => {
-          setIsEditingDetails(false);
-          setDetailsFeedback(null);
-        }, 1400);
-      }
-    } catch (err: any) {
-      setDetailsFeedback({ type: 'error', text: err.message || 'Ошибка при сохранении' });
-    } finally {
-      setIsSavingDetails(false);
-    }
-  };
 
   // Load user order history
   const loadHistory = async () => {
@@ -485,8 +412,7 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
                   </div>
                 </div>
 
-                {/* Active Payment Details Preview Banner with Edit Button */}
-                {/* Active Payment Details Preview Banner with Edit Button */}
+                {/* Active Payment Details Preview Banner */}
                 <div className="p-3 rounded-xl bg-[#0d131f] border border-slate-800/80 flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
@@ -501,120 +427,7 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
                       </div>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsEditingDetails(!isEditingDetails)}
-                    className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 text-xs font-bold transition flex items-center gap-1 cursor-pointer shrink-0 ml-2"
-                  >
-                    <Edit2 className="w-3 h-3" />
-                    <span>{isEditingDetails ? 'Закрыть' : 'Изменить'}</span>
-                  </button>
                 </div>
-
-                {/* Edit Details Drawer Form (when opened on Step 1) */}
-                {isEditingDetails && (
-                  <form onSubmit={handleSaveDetails} className="p-4 rounded-2xl bg-[#141d2f] border border-amber-500/50 space-y-3 animate-fade-in shadow-xl">
-                    <div className="flex items-center justify-between border-b border-slate-700/60 pb-2">
-                      <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5 uppercase tracking-wide">
-                        <Edit2 className="w-3.5 h-3.5" />
-                        <span>Редактирование карт (Humo & Visa)</span>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setIsEditingDetails(false)}
-                        className="text-slate-400 hover:text-white text-xs font-bold px-2 py-0.5 rounded bg-slate-800"
-                      >
-                        ✕
-                      </button>
-                    </div>
-
-                    <div className="space-y-2 text-xs">
-                      <div>
-                        <label className="text-[11px] text-amber-300 font-semibold block mb-1">
-                          Номер карты HUMO (Узбекистан):
-                        </label>
-                        <input
-                          type="text"
-                          value={editCardHumo}
-                          onChange={(e) => setEditCardHumo(e.target.value)}
-                          placeholder="9860 1701 1354 8268"
-                          className="w-full bg-[#090d16] border border-slate-700 focus:border-amber-500 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none"
-                          required
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-[11px] text-sky-300 font-semibold block mb-1">
-                          Номер карты VISA (Международная / СНГ):
-                        </label>
-                        <input
-                          type="text"
-                          value={editCardVisa}
-                          onChange={(e) => setEditCardVisa(e.target.value)}
-                          placeholder="4023 0605 0973 3761"
-                          className="w-full bg-[#090d16] border border-slate-700 focus:border-sky-500 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none"
-                          required
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <div>
-                          <label className="text-[11px] text-slate-300 font-semibold block mb-1">
-                            Имя получателя (ФИО):
-                          </label>
-                          <input
-                            type="text"
-                            value={editHolder}
-                            onChange={(e) => setEditHolder(e.target.value)}
-                            placeholder="Musallam Abidov"
-                            className="w-full bg-[#090d16] border border-slate-700 focus:border-amber-500 rounded-xl px-3 py-2 text-white text-xs focus:outline-none"
-                            required
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-[11px] text-slate-300 font-semibold block mb-1">
-                            ID / Телефон / СБП:
-                          </label>
-                          <input
-                            type="text"
-                            value={editPhone}
-                            onChange={(e) => setEditPhone(e.target.value)}
-                            placeholder="200205068"
-                            className="w-full bg-[#090d16] border border-slate-700 focus:border-amber-500 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {detailsFeedback && (
-                      <div className={`p-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 ${
-                        detailsFeedback.type === 'success' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                      }`}>
-                        {detailsFeedback.type === 'success' ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
-                        <span>{detailsFeedback.text}</span>
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-2 pt-1">
-                      <button
-                        type="submit"
-                        disabled={isSavingDetails}
-                        className="flex-1 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-extrabold text-xs flex items-center justify-center gap-1.5 transition shadow cursor-pointer disabled:opacity-50"
-                      >
-                        <Save className="w-3.5 h-3.5" />
-                        <span>{isSavingDetails ? 'Сохранение...' : 'Сохранить реквизиты'}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setIsEditingDetails(false)}
-                        className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition cursor-pointer"
-                      >
-                        Отмена
-                      </button>
-                    </div>
-                  </form>
-                )}
               </div>
             )}
 
@@ -636,111 +449,6 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
                   </div>
                 </div>
 
-                {/* Edit Details Drawer Form (when opened on Step 2) */}
-                {isEditingDetails && (
-                  <form onSubmit={handleSaveDetails} className="p-4 rounded-2xl bg-[#141d2f] border border-amber-500/50 space-y-3 animate-fade-in shadow-xl">
-                    <div className="flex items-center justify-between border-b border-slate-700/60 pb-2">
-                      <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5 uppercase tracking-wide">
-                        <Edit2 className="w-3.5 h-3.5" />
-                        <span>Редактирование карт (Humo & Visa)</span>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setIsEditingDetails(false)}
-                        className="text-slate-400 hover:text-white text-xs font-bold px-2 py-0.5 rounded bg-slate-800"
-                      >
-                        ✕
-                      </button>
-                    </div>
-
-                    <div className="space-y-2 text-xs">
-                      <div>
-                        <label className="text-[11px] text-amber-300 font-semibold block mb-1">
-                          Номер карты HUMO (Узбекистан):
-                        </label>
-                        <input
-                          type="text"
-                          value={editCardHumo}
-                          onChange={(e) => setEditCardHumo(e.target.value)}
-                          placeholder="9860 1701 1354 8268"
-                          className="w-full bg-[#090d16] border border-slate-700 focus:border-amber-500 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none"
-                          required
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-[11px] text-sky-300 font-semibold block mb-1">
-                          Номер карты VISA (Международная / СНГ):
-                        </label>
-                        <input
-                          type="text"
-                          value={editCardVisa}
-                          onChange={(e) => setEditCardVisa(e.target.value)}
-                          placeholder="4023 0605 0973 3761"
-                          className="w-full bg-[#090d16] border border-slate-700 focus:border-sky-500 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none"
-                          required
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <div>
-                          <label className="text-[11px] text-slate-300 font-semibold block mb-1">
-                            Имя получателя (ФИО):
-                          </label>
-                          <input
-                            type="text"
-                            value={editHolder}
-                            onChange={(e) => setEditHolder(e.target.value)}
-                            placeholder="Musallam Abidov"
-                            className="w-full bg-[#090d16] border border-slate-700 focus:border-amber-500 rounded-xl px-3 py-2 text-white text-xs focus:outline-none"
-                            required
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-[11px] text-slate-300 font-semibold block mb-1">
-                            ID / Телефон / СБП:
-                          </label>
-                          <input
-                            type="text"
-                            value={editPhone}
-                            onChange={(e) => setEditPhone(e.target.value)}
-                            placeholder="200205068"
-                            className="w-full bg-[#090d16] border border-slate-700 focus:border-amber-500 rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {detailsFeedback && (
-                      <div className={`p-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 ${
-                        detailsFeedback.type === 'success' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                      }`}>
-                        {detailsFeedback.type === 'success' ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
-                        <span>{detailsFeedback.text}</span>
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-2 pt-1">
-                      <button
-                        type="submit"
-                        disabled={isSavingDetails}
-                        className="flex-1 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-extrabold text-xs flex items-center justify-center gap-1.5 transition shadow cursor-pointer disabled:opacity-50"
-                      >
-                        <Save className="w-3.5 h-3.5" />
-                        <span>{isSavingDetails ? 'Сохранение...' : 'Сохранить реквизиты'}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setIsEditingDetails(false)}
-                        className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition cursor-pointer"
-                      >
-                        Отмена
-                      </button>
-                    </div>
-                  </form>
-                )}
-
                 {/* Recipient Details Card */}
                 <div className="p-4 rounded-2xl bg-[#131a28] border border-slate-700/80 space-y-3">
                   <div className="flex items-center justify-between">
@@ -748,14 +456,6 @@ export const TopUpModal: React.FC<TopUpModalProps> = ({
                       <CreditCard className="w-4 h-4 text-amber-400" />
                       <span>Выберите карту для перевода (Humo или Visa):</span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setIsEditingDetails(!isEditingDetails)}
-                      className="text-[11px] font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1 cursor-pointer transition"
-                    >
-                      <Edit2 className="w-3 h-3" />
-                      <span>{isEditingDetails ? '✕ Закрыть' : '✏️ Изменить'}</span>
-                    </button>
                   </div>
 
                   {/* Card 1: HUMO */}
