@@ -1,0 +1,232 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile and persistent state",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "photoURL": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["OWNER", "ADMIN", "USER"]
+        },
+        "balance": {
+          "type": "number"
+        },
+        "isBanned": {
+          "type": "boolean"
+        },
+        "banReason": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "number"
+        },
+        "updatedAt": {
+          "type": "number"
+        }
+      },
+      "required": ["userId", "email"]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Authorized administrators and their permission grants",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["OWNER", "ADMIN"]
+        },
+        "canBanUsers": {
+          "type": "boolean"
+        },
+        "canManageBalance": {
+          "type": "boolean"
+        },
+        "canEditOdds": {
+          "type": "boolean"
+        },
+        "canManageAdmins": {
+          "type": "boolean"
+        },
+        "canViewLogs": {
+          "type": "boolean"
+        },
+        "addedAt": {
+          "type": "number"
+        },
+        "addedBy": {
+          "type": "string"
+        }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "AdminAuditLog": {
+      "title": "AdminAuditLog",
+      "description": "Tamper-proof system activity log of all administrative actions",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "adminEmail": {
+          "type": "string"
+        },
+        "adminUid": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        },
+        "targetId": {
+          "type": "string"
+        },
+        "targetEmail": {
+          "type": "string"
+        },
+        "details": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "number"
+        }
+      },
+      "required": ["id", "adminEmail", "action", "timestamp"]
+    },
+    "CaseOdds": {
+      "title": "CaseOdds",
+      "description": "Configured drop probabilities and item weights for cases",
+      "type": "object",
+      "properties": {
+        "caseId": {
+          "type": "string"
+        },
+        "caseName": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "number"
+        },
+        "updatedBy": {
+          "type": "string"
+        }
+      },
+      "required": ["caseId", "updatedAt"]
+    },
+    "GoldOrder": {
+      "title": "GoldOrder",
+      "description": "Gold purchase deposit request",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "goldAmount": {
+          "type": "number"
+        },
+        "bonusGold": {
+          "type": "number"
+        },
+        "totalGold": {
+          "type": "number"
+        },
+        "paymentAmountRub": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["PENDING_PAYMENT", "PENDING_REVIEW", "APPROVED", "REJECTED", "CANCELLED"]
+        },
+        "createdAt": {
+          "type": "number"
+        }
+      },
+      "required": ["id", "userId", "goldAmount", "status"]
+    },
+    "GoldWithdrawal": {
+      "title": "GoldWithdrawal",
+      "description": "Gold withdrawal payout request",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "goldAmount": {
+          "type": "number"
+        },
+        "payoutMethod": {
+          "type": "string"
+        },
+        "payoutTarget": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["PENDING_REVIEW", "APPROVED", "PROCESSING", "COMPLETED", "REJECTED", "CANCELLED"]
+        },
+        "createdAt": {
+          "type": "number"
+        }
+      },
+      "required": ["id", "userId", "goldAmount", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile documents"
+    },
+    "/admins/{adminId}": {
+      "schema": "AdminRecord",
+      "description": "Protected admin records"
+    },
+    "/admin_logs/{logId}": {
+      "schema": "AdminAuditLog",
+      "description": "System administrative audit logs"
+    },
+    "/case_odds/{caseId}": {
+      "schema": "CaseOdds",
+      "description": "Published transparent case odds"
+    },
+    "/orders/{orderId}": {
+      "schema": "GoldOrder",
+      "description": "Order records for gold topups"
+    },
+    "/withdrawals/{withdrawalId}": {
+      "schema": "GoldWithdrawal",
+      "description": "Withdrawal records for payouts"
+    }
+  }
+}

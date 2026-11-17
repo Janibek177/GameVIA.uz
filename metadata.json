@@ -1,0 +1,6 @@
+{
+  "name": "GameVia - CS2 Case Simulator & Games",
+  "description": "Официальный симулятор GameVia: кейсы CS2/Standoff, Лесенка, Башня, Краш, Апгрейды и вывод в игры.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
